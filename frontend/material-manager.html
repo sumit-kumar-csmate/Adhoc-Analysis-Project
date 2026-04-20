@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Manager - Trade Data AI Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Sticky Header */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(10, 31, 38, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(20, 184, 166, 0.2);
+            padding: 10px 0;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .manager-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .material-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .material-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .material-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(20, 184, 166, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .material-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .material-desc {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-top: 0;
+        }
+
+        .material-actions {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .btn-small {
+            padding: 10px 18px;
+            font-size: 13px;
+            min-width: auto;
+            height: auto;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.6);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: rgba(70, 130, 255, 0.6);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sticky Header with Back Button -->
+    <div class="sticky-header">
+        <div class="container" style="display: flex; justify-content: center; align-items: center;">
+            <button onclick="window.location.href='index.html'" class="btn btn-secondary"
+                style="padding: 12px 24px; font-size: 14px;">
+                ← Back to Analyzer
+            </button>
+        </div>
+    </div>
+
+    <div class="container" style="padding-top: 60px;">
+        <!-- Title -->
+        <div class="glass-card title-card">
+            <h1>Material Manager</h1>
+        </div>
+
+        <!-- Material List -->
+        <div class="glass-card">
+            <div class="manager-header">
+                <h2>Configured Materials</h2>
+                <div style="display: flex; gap: 12px;">
+                    <button id="exportBtn" class="btn btn-secondary btn-small">📥 Export Database</button>
+                    <button id="importBtn" class="btn btn-secondary btn-small">📤 Import Database</button>
+                    <button id="addMaterialBtn" class="btn btn-primary btn-small">+ Add Material</button>
+                </div>
+            </div>
+
+            <!-- Search Box -->
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="🔍 Search materials by name or description..." style="width: 100%; padding: 14px 20px; background: rgba(255, 255, 255, 0.12); 
+                              border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 12px; 
+                              color: rgba(255, 255, 255, 0.95); font-size: 14px; transition: all 0.3s ease;"
+                    onkeyup="filterMaterials()" />
+                <style>
+                    #searchInput::placeholder {
+                        color: rgba(255, 255, 255, 0.5);
+                    }
+
+                    #searchInput:focus {
+                        background: rgba(255, 255, 255, 0.15);
+                        border-color: rgba(20, 184, 166, 0.5);
+                        outline: none;
+                    }
+                </style>
+            </div>
+
+            <div id="materialList" class="material-list">
+                <p style="text-align: center; color: rgba(255,255,255,0.5);">Loading materials...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2>Import Materials Database</h2>
+            <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 20px;">
+                Choose how to import the materials from the uploaded file:
+            </p>
+
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="radio" name="importMode" value="merge" checked
+                        style="width: auto; margin-right: 10px;">
+                    <div>
+                        <strong>Merge</strong>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Add new materials and update
+                            existing ones (recommended)</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="radio" name="importMode" value="replace" style="width: auto; margin-right: 10px;">
+                    <div>
+                        <strong>Replace All</strong>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Delete all existing materials and
+                            replace with imported ones</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="cancelImportBtn" class="btn btn-secondary btn-small">Cancel</button>
+                <button id="confirmImportBtn" class="btn btn-primary btn-small">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="materialModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Add New Material</h2>
+
+            <div class="form-group">
+                <label>Material Name *</label>
+                <input type="text" id="materialName" placeholder="e.g., Cocamidopropyl Betaine (CAPB)" />
+            </div>
+
+            <div class="form-group">
+                <label>Description *</label>
+                <input type="text" id="materialDescription"
+                    placeholder="e.g., Amphoteric surfactant used in personal care products" />
+            </div>
+
+            <div class="form-group">
+                <label>Classification Categories *</label>
+                <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">
+                    Define what information the AI should extract from product descriptions
+                </p>
+                <div id="categoriesList" style="margin-bottom: 10px;"></div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <input type="text" id="newCategoryInput"
+                        placeholder="e.g., Material Type, Grade, Tradename, Origin, Manufacturer"
+                        style="flex: 1; min-width: 0; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.25); color: white; padding: 16px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; outline: none; transition: all 0.3s ease;"
+                        onfocus="this.style.borderColor='rgba(168, 85, 247, 0.6)'; this.style.background='rgba(255, 255, 255, 0.15)';"
+                        onblur="this.style.borderColor='rgba(255, 255, 255, 0.25)'; this.style.background='rgba(255, 255, 255, 0.1)';"
+                        onkeypress="if(event.key==='Enter'){addCategory();event.preventDefault();}">
+                    <button type="button" onclick="addCategory()"
+                        style="flex: 0 0 auto; width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1, #a855f7); border: none; color: white; border-radius: 10px; font-size: 20px; font-weight: 600; cursor: pointer; transition: all 0.2s;">+</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="margin-bottom: 0;">AI Prompt Template *</label>
+                    <button type="button" class="btn btn-secondary btn-small" id="enhancePromptBtn"
+                        onclick="enhancePrompt()"
+                        style="font-size: 11px; padding: 2px 8px; background: rgba(100, 200, 255, 0.2); border-color: rgba(100, 200, 255, 0.4); color: white;">
+                        ✨ Enhance with AI
+                    </button>
+                </div>
+                <textarea id="promptTemplate" class="prompt-editor" placeholder="Write a rough draft of what you want (e.g., 'Extract the grade and origin'). Click 'Enhance with AI' to optimize it. 
+                
+(Optional) Use {input_data} to position the input text. If omitted, it will be added automatically."></textarea>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="cancelBtn" class="btn btn-secondary btn-small">Cancel</button>
+                <button id="saveBtn" class="btn btn-primary btn-small">Save Material</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="toast.js"></script>
+    <script src="material-manager.js"></script>
+</body>
+
+</html>

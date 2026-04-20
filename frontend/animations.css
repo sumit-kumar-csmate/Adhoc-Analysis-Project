@@ -1,0 +1,188 @@
+/* ============================================
+   ANIMATIONS & KEYFRAMES
+   ============================================ */
+
+/* Animated Gradient Background - DISABLED */
+/* @keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+} */
+
+/* Floating Animation for Particles */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px) translateX(0px);
+    }
+
+    25% {
+        transform: translateY(-20px) translateX(10px);
+    }
+
+    50% {
+        transform: translateY(-10px) translateX(-10px);
+    }
+
+    75% {
+        transform: translateY(-15px) translateX(5px);
+    }
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Shimmer Effect */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Slide In from Top */
+@keyframes slideInTop {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Slide Out to Top */
+@keyframes slideOutTop {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+/* Fade In */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Fade Out */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+/* Progress Bar Fill Animation */
+@keyframes progressPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(70, 180, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(70, 180, 255, 0.8);
+    }
+}
+
+/* Glow Effect */
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(70, 130, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(70, 130, 255, 0.8), 0 0 30px rgba(70, 130, 255, 0.6);
+    }
+}
+
+/* Rotate Smooth */
+@keyframes rotateSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Bounce In */
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Drag Over Effect */
+@keyframes dragOver {
+
+    0%,
+    100% {
+        border-color: rgba(70, 180, 255, 0.6);
+        background: rgba(70, 180, 255, 0.1);
+    }
+
+    50% {
+        border-color: rgba(70, 180, 255, 1);
+        background: rgba(70, 180, 255, 0.2);
+    }
+}
