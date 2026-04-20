@@ -12,6 +12,17 @@ import time
 import json
 import uuid
 
+# Map of UI model names → actual API model IDs accepted by the proxy
+MODEL_ID_MAP = {
+    "claude-haiku-3":    "claude-3-haiku-20240307",
+    "claude-sonnet-4.6": "claude-sonnet-4-5",
+    "claude-opus-4.6":   "claude-opus-4-5",
+}
+
+def resolve_model(model_key: str) -> str:
+    """Translate frontend model key to the real API model ID."""
+    return MODEL_ID_MAP.get(model_key, model_key)
+
 # Add core to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -362,9 +373,9 @@ def analyze_file():
         material = request.json.get('material')
         selected_model = request.json.get('model', 'claude-haiku-3')
         
-        # Set model on agent dynamically
-        agent.model_name = selected_model
-        logger.info(f"Model set to: {selected_model}")
+        # Set model on agent dynamically (resolve friendly name → real API model ID)
+        agent.model_name = resolve_model(selected_model)
+        logger.info(f"Model set to: {agent.model_name} (from: {selected_model})")
         
         # Set Up Agent based on Mode
         if mode == 'specific':
@@ -511,9 +522,9 @@ def analyze_file_stream():
             total_rows = len(df)
             original_columns = list(df.columns)
 
-            # Set model on agent dynamically
-            agent.model_name = selected_model
-            logger.info(f"Stream: model set to: {selected_model}")
+            # Set model on agent dynamically (resolve friendly name → real API model ID)
+            agent.model_name = resolve_model(selected_model)
+            logger.info(f"Stream: model set to: {agent.model_name} (from: {selected_model})")
 
             # Set up agent based on mode
             if mode == 'specific':
