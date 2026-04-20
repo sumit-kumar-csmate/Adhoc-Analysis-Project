@@ -171,8 +171,19 @@ CRITICAL: Output ONLY valid JSON. No markdown code blocks, no explanations, no p
                     max_tokens=1024
                 )
                 
+                # Guard: proxy may return 200 with empty choices
+                if not response or not response.choices or response.choices[0] is None:
+                    logger.warning(f"classify_description: empty choices from proxy (attempt {attempt+1}), model={self.model_name}")
+                    if attempt < retries - 1:
+                        time.sleep(2 * (attempt + 1))
+                        continue
+                    return self._empty_classification()
+
                 # Parse JSON
-                result_text = response.choices[0].message.content.replace('```json', '').replace('```', '').strip()
+                result_text = response.choices[0].message.content
+                if not result_text:
+                    raise ValueError("Empty content in response message")
+                result_text = result_text.replace('```json', '').replace('```', '').strip()
                 try:
                     classification = json.loads(result_text)
                 except json.JSONDecodeError as e:
@@ -297,12 +308,32 @@ CRITICAL: Output ONLY the JSON array. Start with [ and end with ]. No markdown, 
                     max_tokens=4096  # Max output for Haiku
                 )
 
+                # --- Guard: proxy may return 200 with empty choices ---
+                if not response or not response.choices or response.choices[0] is None:
+                    logger.warning(
+                        f"_classify_chunk: proxy returned 200 but empty choices "
+                        f"(model={self.model_name}, attempt={attempt+1}). "
+                        f"Raw response: {response!r}"
+                    )
+                    if attempt < retries - 1:
+                        time.sleep(2 * (attempt + 1))
+                        continue
+                    # Final attempt — fall back to per-item calls
+                    logger.warning("Empty choices on all attempts, falling back to per-item calls")
+                    result_map = {}
+                    for i, desc in enumerate(chunk):
+                        result_map[start_idx + i] = self.classify_description(desc, mode=mode)
+                    return result_map
+
                 # Extract Token Usage for the chunk
                 usage = getattr(response, 'usage', None)
                 chunk_prompt_tokens = getattr(usage, 'prompt_tokens', 0) if usage else 0
                 chunk_completion_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
 
                 raw = response.choices[0].message.content
+                if not raw:
+                    raise ValueError("Empty content in response message")
+
                 logger.info(f"_classify_chunk RAW response (chunk start={start_idx}, len={len(chunk)}): {raw[:500]!r}")
                 raw = raw.replace('```json', '').replace('```', '').strip()
 
@@ -354,13 +385,19 @@ CRITICAL: Output ONLY the JSON array. Start with [ and end with ]. No markdown, 
                     time.sleep(60 * (attempt + 1))
                     continue
                 if attempt == retries - 1:
+                    # Final fallback: try per-item so we don't lose entire chunk
+                    logger.warning("API error on all attempts, falling back to per-item calls")
                     result_map = {}
-                    for i in range(len(chunk)):
-                        result_map[start_idx + i] = {}
+                    for i, desc in enumerate(chunk):
+                        try:
+                            result_map[start_idx + i] = self.classify_description(desc, mode=mode)
+                        except Exception:
+                            result_map[start_idx + i] = {}
                     return result_map
                 time.sleep(2 * (attempt + 1))
 
         return {}
+
 
     def classify_batch(self, descriptions: List[str], progress_callback=None,
                        chunk_size: int = 25, max_workers: int = 5,
