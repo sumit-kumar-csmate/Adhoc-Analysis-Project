@@ -63,6 +63,16 @@
                     </div>
                 </div>
 
+                <!-- Model Selection -->
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label style="margin-bottom: 12px; display: block; color: rgba(255, 255, 255, 0.8); font-size: 14px; font-weight: 500;">AI Model</label>
+                    <select id="modelSelect" onchange="if(selectedFilePath) updateCostEstimate()" style="width: 100%; padding: 12px; background: #2a2a35; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; outline: none; font-size: 14px;">
+                        <option value="claude-haiku-3" selected>Claude Haiku 3 (Fast, Economy)</option>
+                        <option value="claude-sonnet-4.6">Claude Sonnet 4.6 (Balanced)</option>
+                        <option value="claude-opus-4.6">Claude Opus 4.6 (Highest Quality, Premium)</option>
+                    </select>
+                </div>
+
                 <!-- Analysis Mode Selection -->
                 <div class="form-group" style="margin-bottom: 24px;">
                     <label

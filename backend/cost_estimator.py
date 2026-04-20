@@ -18,13 +18,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CostConfig:
-    # Gemini 2.5 Flash
-    FLASH_INPUT_RATE: float = 0.50    # USD per 1M input tokens
-    FLASH_OUTPUT_RATE: float = 1.50   # USD per 1M output tokens (Adjusted for 2.x)
+    # Claude Sonnet 4.6
+    SONNET_4_6_INPUT_RATE: float = 3.00
+    SONNET_4_6_OUTPUT_RATE: float = 15.00
     
-    # Gemini 2.0 Pro
-    PRO_INPUT_RATE: float = 1.25      # USD per 1M input tokens
-    PRO_OUTPUT_RATE: float = 5.00     # USD per 1M output tokens
+    # Claude Opus 4.6
+    OPUS_4_6_INPUT_RATE: float = 5.00
+    OPUS_4_6_OUTPUT_RATE: float = 25.00
+    
+    # Claude Haiku 3
+    HAIKU_3_INPUT_RATE: float = 0.25
+    HAIKU_3_OUTPUT_RATE: float = 1.25
     
     # Exchange rate
     USD_TO_INR: float = 92.0
@@ -95,12 +99,15 @@ class CostEstimator:
         total_output_tokens = row_count * column_count * self.TOKENS_PER_OUTPUT_CELL
         
         # Get rates based on model
-        if model == "pro":
-            input_rate = self.config.PRO_INPUT_RATE
-            output_rate = self.config.PRO_OUTPUT_RATE
-        else:
-            input_rate = self.config.FLASH_INPUT_RATE
-            output_rate = self.config.FLASH_OUTPUT_RATE
+        if model == "claude-sonnet-4.6":
+            input_rate = self.config.SONNET_4_6_INPUT_RATE
+            output_rate = self.config.SONNET_4_6_OUTPUT_RATE
+        elif model == "claude-opus-4.6":
+            input_rate = self.config.OPUS_4_6_INPUT_RATE
+            output_rate = self.config.OPUS_4_6_OUTPUT_RATE
+        else: # default to haiku-3
+            input_rate = self.config.HAIKU_3_INPUT_RATE
+            output_rate = self.config.HAIKU_3_OUTPUT_RATE
         
         # Calculate costs in USD
         input_cost_usd = (total_input_tokens / 1_000_000) * input_rate
@@ -157,12 +164,15 @@ class CostEstimator:
             Dictionary with actual cost details
         """
         # Get rates based on model
-        if model == "pro":
-            input_rate = self.config.PRO_INPUT_RATE
-            output_rate = self.config.PRO_OUTPUT_RATE
-        else:
-            input_rate = self.config.FLASH_INPUT_RATE
-            output_rate = self.config.FLASH_OUTPUT_RATE
+        if model == "claude-sonnet-4.6":
+            input_rate = self.config.SONNET_4_6_INPUT_RATE
+            output_rate = self.config.SONNET_4_6_OUTPUT_RATE
+        elif model == "claude-opus-4.6":
+            input_rate = self.config.OPUS_4_6_INPUT_RATE
+            output_rate = self.config.OPUS_4_6_OUTPUT_RATE
+        else: # default to haiku-3
+            input_rate = self.config.HAIKU_3_INPUT_RATE
+            output_rate = self.config.HAIKU_3_OUTPUT_RATE
         
         # Calculate costs in USD
         input_cost_usd = (input_tokens / 1_000_000) * input_rate
@@ -221,12 +231,15 @@ class CostEstimator:
         total_output_tokens = len(descriptions) * column_count * self.TOKENS_PER_OUTPUT_CELL
         
         # Get rates
-        if model == "pro":
-            input_rate = self.config.PRO_INPUT_RATE
-            output_rate = self.config.PRO_OUTPUT_RATE
-        else:
-            input_rate = self.config.FLASH_INPUT_RATE
-            output_rate = self.config.FLASH_OUTPUT_RATE
+        if model == "claude-sonnet-4.6":
+            input_rate = self.config.SONNET_4_6_INPUT_RATE
+            output_rate = self.config.SONNET_4_6_OUTPUT_RATE
+        elif model == "claude-opus-4.6":
+            input_rate = self.config.OPUS_4_6_INPUT_RATE
+            output_rate = self.config.OPUS_4_6_OUTPUT_RATE
+        else: # default to haiku-3
+            input_rate = self.config.HAIKU_3_INPUT_RATE
+            output_rate = self.config.HAIKU_3_OUTPUT_RATE
         
         # Calculate costs
         input_cost_usd = (total_input_tokens / 1_000_000) * input_rate

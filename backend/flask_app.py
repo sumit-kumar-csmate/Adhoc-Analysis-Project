@@ -155,7 +155,7 @@ def preview_file():
                     row_count=len(df),
                     column_count=3,
                     avg_description_length=avg_desc_length,
-                    model="flash"
+                    model="claude-haiku-3"
                 )
             except Exception as cost_err:
                 logger.warning(f"Cost estimation failed: {cost_err}")
@@ -357,9 +357,14 @@ def analyze_file():
         if desc_column is None:
             return jsonify({'error': 'Could not identify data column'}), 400
         
-        # Get mode and material
+        # Get mode, model, and material
         mode = request.json.get('mode', 'specific')
         material = request.json.get('material')
+        selected_model = request.json.get('model', 'claude-haiku-3')
+        
+        # Set model on agent dynamically
+        agent.model_name = selected_model
+        logger.info(f"Model set to: {selected_model}")
         
         # Set Up Agent based on Mode
         if mode == 'specific':
@@ -419,7 +424,7 @@ def analyze_file():
         processing_time = time.time() - start_time
         
         # Calculate Actual Cost
-        model_name = request.json.get('model', 'flash')
+        model_name = request.json.get('model', 'claude-haiku-3')
         cost_details = cost_estimator.calculate_actual_cost(total_prompt_tokens, total_completion_tokens, model_name)
         actual_cost = cost_details['cost_usd']['total']
         
@@ -502,8 +507,13 @@ def analyze_file_stream():
                 return
 
             mode = request.args.get('mode', 'specific')
+            selected_model = request.args.get('model', 'claude-haiku-3')
             total_rows = len(df)
             original_columns = list(df.columns)
+
+            # Set model on agent dynamically
+            agent.model_name = selected_model
+            logger.info(f"Stream: model set to: {selected_model}")
 
             # Set up agent based on mode
             if mode == 'specific':
@@ -578,7 +588,7 @@ def analyze_file_stream():
             processing_time = time.time() - start_time
             
             # Calculate Actual Cost
-            model_name = request.args.get('model', 'flash')
+            model_name = request.args.get('model', 'claude-haiku-3')
             cost_details = cost_estimator.calculate_actual_cost(total_prompt_tokens, total_completion_tokens, model_name)
             actual_cost = cost_details['cost_usd']['total']
 

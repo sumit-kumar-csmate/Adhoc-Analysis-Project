@@ -174,7 +174,7 @@ async function updateCostEstimate() {
                 file_path: selectedFilePath,
                 material: currentMaterial,
                 mode: mode,
-                model: 'flash'
+                model: document.getElementById('modelSelect') ? document.getElementById('modelSelect').value : 'claude-haiku-3'
             })
         });
 
@@ -327,7 +327,12 @@ function displayCostEstimate(estimate) {
     }
 
     // Update model name
-    const modelDisplay = estimate.model === 'pro' ? 'Gemini 3 Pro Preview' : 'Gemini 3 Flash Preview';
+    const modelMap = {
+        'claude-haiku-3': 'Claude Haiku 3',
+        'claude-sonnet-4.6': 'Claude Sonnet 4.6',
+        'claude-opus-4.6': 'Claude Opus 4.6'
+    };
+    const modelDisplay = modelMap[estimate.model] || estimate.model;
     document.getElementById('modelName').textContent = modelDisplay;
 }
 
@@ -446,7 +451,8 @@ async function onAnalyze() {
             new URLSearchParams({
                 file_path: selectedFilePath,
                 material: currentMaterial,
-                mode: mode
+                mode: mode,
+                model: document.getElementById('modelSelect') ? document.getElementById('modelSelect').value : 'claude-haiku-3'
             })
         );
 
@@ -613,7 +619,8 @@ async function analyzeWithoutStream() {
             body: JSON.stringify({
                 file_path: selectedFilePath,
                 material: currentMaterial,
-                mode: document.querySelector('input[name="analysisMode"]:checked').value
+                mode: document.querySelector('input[name="analysisMode"]:checked').value,
+                model: document.getElementById('modelSelect') ? document.getElementById('modelSelect').value : 'claude-haiku-3'
             })
         });
 

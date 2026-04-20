@@ -36,7 +36,7 @@ class TradeDataAgent:
 
         # Claude client (used for both classification and prompt enhancement)
         self.client = OpenAI(api_key=api_key, base_url=base_url)
-        self.model_name = "claude-3-haiku-20240307"
+        self.model_name = "claude-haiku-3"  # Default; overridden per-request by flask_app
         logger.info(f"Claude client configured: {base_url} (model: {self.model_name})")
 
         self.system_instruction = None
