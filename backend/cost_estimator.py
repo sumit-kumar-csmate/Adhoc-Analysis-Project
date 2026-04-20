@@ -4,8 +4,16 @@ Calculates estimated and actual API costs based on token usage
 """
 
 import math
+import logging
 from typing import Dict, Optional
 from dataclasses import dataclass
+
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
+    
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,10 +45,22 @@ class CostEstimator:
         self.CHARS_PER_TOKEN = 4
     
     def estimate_tokens_from_text(self, text: str) -> int:
-        """Estimate tokens from text length"""
+        """Estimate tokens from text using tiktoken or fallback heuristic"""
         if not text:
             return 0
-        return max(1, len(text.strip()) // self.CHARS_PER_TOKEN)
+            
+        text_str = str(text).strip()
+        
+        if tiktoken:
+            try:
+                # cl100k_base is the most common modern tokenizer (GPT-4, Claude approximations)
+                encoding = tiktoken.get_encoding("cl100k_base")
+                return len(encoding.encode(text_str))
+            except Exception as e:
+                logger.warning(f"Tiktoken error: {e}, falling back to heuristic")
+                
+        # Fallback to length heuristic
+        return max(1, len(text_str) // self.CHARS_PER_TOKEN)
     
     def estimate_pre_analysis(
         self,

@@ -462,7 +462,12 @@ async function onAnalyze() {
                 const elapsed = (Date.now() - startTime) / 1000;
                 const speed = data.current / elapsed;
                 const remaining = (data.total - data.current) / speed;
-                progressDetails.innerHTML = `<strong>Speed:</strong> ${speed.toFixed(1)} rows/sec | <strong>ETA:</strong> ${remaining > 0 ? remaining.toFixed(0) : 0}s`;
+                
+                let detailsHTML = `<strong>Speed:</strong> ${speed.toFixed(1)} rows/sec | <strong>ETA:</strong> ${remaining > 0 ? remaining.toFixed(0) : 0}s`;
+                if (data.prompt_tokens !== undefined) {
+                    detailsHTML += ` | <strong>Tokens:</strong> ${(data.prompt_tokens + data.completion_tokens).toLocaleString()}`;
+                }
+                progressDetails.innerHTML = detailsHTML;
 
                 // Build live results table
                 appendLiveResults(data.rows, data.current);
@@ -475,13 +480,13 @@ async function onAnalyze() {
                 status.innerHTML = '✓ Analysis complete!';
 
                 const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-                progressDetails.innerHTML = `<strong>Processed:</strong> ${data.rows_processed} rows | <strong>Time:</strong> ${totalTime}s`;
+                progressDetails.innerHTML = `<strong>Processed:</strong> ${data.rows_processed} rows | <strong>Time:</strong> ${totalTime}s | <strong>Tokens:</strong> ${(data.prompt_tokens + data.completion_tokens).toLocaleString()} | <strong>Cost:</strong> $${data.actual_cost.toFixed(4)}`;
 
                 // Store job_id and show Download button
                 currentJobId = data.job_id;
                 document.getElementById('downloadBtn').style.display = 'inline-flex';
 
-                toast.success(`Analysis done! ${data.rows_processed} rows in ${totalTime}s — click Download to save the file.`);
+                toast.success(`Analysis done! Processed ${data.rows_processed} rows for $${data.actual_cost.toFixed(4)}. Click Download to save.`);
                 loadAnalysisHistory();
 
             } else if (data.type === 'error') {
@@ -624,9 +629,10 @@ async function analyzeWithoutStream() {
             progressFill.classList.remove('active');
             status.innerHTML = '✓ Analysis complete!';
 
-            progressDetails.innerHTML = `<strong>Processed:</strong> ${data.rows_processed} rows`;
+            let costStr = data.actual_cost !== undefined ? ` | <strong>Cost:</strong> $${data.actual_cost.toFixed(4)}` : '';
+            progressDetails.innerHTML = `<strong>Processed:</strong> ${data.rows_processed} rows${costStr}`;
 
-            toast.success(`Analysis completed! Processed ${data.rows_processed} rows.`);
+            toast.success(data.actual_cost !== undefined ? `Analysis completed for $${data.actual_cost.toFixed(4)}!` : `Analysis completed! Processed ${data.rows_processed} rows.`);
             loadAnalysisHistory();
 
             setTimeout(() => {
@@ -667,8 +673,12 @@ async function loadAnalysisHistory() {
                     <div style="font-size: 12px; opacity: 0.8;">Rows Processed</div>
                 </div>
                 <div style="background: rgba(70, 180, 255, 0.15); padding: 20px; border-radius: 12px; border-left: 3px solid #46b4ff;">
-                    <div style="font-size: 28px; font-weight: 700; margin-bottom: 5px;">${data.stats.average_processing_time}s</div>
-                    <div style="font-size: 12px; opacity: 0.8;">Avg. Time</div>
+                    <div style="font-size: 28px; font-weight: 700; margin-bottom: 5px;">${(data.stats.total_tokens_used || 0).toLocaleString()}</div>
+                    <div style="font-size: 12px; opacity: 0.8;">Tokens Used</div>
+                </div>
+                <div style="background: rgba(34, 197, 94, 0.15); padding: 20px; border-radius: 12px; border-left: 3px solid #22c55e;">
+                    <div style="font-size: 28px; font-weight: 700; margin-bottom: 5px;">$${(data.stats.total_cost || 0).toFixed(2)}</div>
+                    <div style="font-size: 12px; opacity: 0.8;">Total Cost</div>
                 </div>
             `;
 
@@ -710,7 +720,8 @@ async function viewFullHistory() {
                                 <th>File Name</th>
                                 <th>Material</th>
                                 <th>Rows</th>
-                                <th>Columns Added</th>
+                                <th>Tokens Used</th>
+                                <th>Cost ($)</th>
                                 <th>Time (s)</th>
                                 <th>Status</th>
                             </tr>
@@ -721,6 +732,8 @@ async function viewFullHistory() {
                 data.analyses.forEach(item => {
                     const date = new Date(item.timestamp).toLocaleString();
                     const time = item.processing_time ? item.processing_time.toFixed(1) : 'N/A';
+                    const tokens = item.total_tokens ? item.total_tokens.toLocaleString() : '0';
+                    const cost = item.actual_cost != null ? item.actual_cost.toFixed(4) : '0.0000';
                     tableHTML += `
                         <tr>
                             <td>${item.id}</td>
@@ -728,7 +741,8 @@ async function viewFullHistory() {
                             <td>${item.file_name}</td>
                             <td>${item.material_type}</td>
                             <td>${item.rows_processed}</td>
-                            <td>${item.columns_added}</td>
+                            <td>${tokens}</td>
+                            <td>${cost}</td>
                             <td>${time}</td>
                             <td>${item.status}</td>
                         </tr>

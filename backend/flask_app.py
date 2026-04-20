@@ -374,10 +374,17 @@ def analyze_file():
         # Process each row
         classifications = []
         total_rows = len(df)
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
         
         for idx, row in df.iterrows():
             description = str(row[desc_column])
             classification = agent.classify_description(description, mode=mode)
+            
+            # Extract Tokens
+            total_prompt_tokens += classification.pop("_prompt_tokens", 0)
+            total_completion_tokens += classification.pop("_completion_tokens", 0)
+            
             classifications.append(classification)
         
         # Insert new columns
@@ -411,6 +418,11 @@ def analyze_file():
         
         processing_time = time.time() - start_time
         
+        # Calculate Actual Cost
+        model_name = request.json.get('model', 'flash')
+        cost_details = cost_estimator.calculate_actual_cost(total_prompt_tokens, total_completion_tokens, model_name)
+        actual_cost = cost_details['cost_usd']['total']
+        
         # Save to history
         file_name = os.path.basename(file_path)
         history.add_analysis(
@@ -421,7 +433,11 @@ def analyze_file():
             columns_added=len(categories),
             processing_time=processing_time,
             categories=categories,
-            status='completed'
+            status='completed',
+            prompt_tokens=total_prompt_tokens,
+            completion_tokens=total_completion_tokens,
+            total_tokens=total_prompt_tokens + total_completion_tokens,
+            actual_cost=actual_cost
         )
         
         return jsonify({
@@ -430,7 +446,10 @@ def analyze_file():
             'rows_processed': total_rows,
             'columns_added': len(categories),
             'processing_time': round(processing_time, 2),
-            'output_file': file_path
+            'output_file': file_path,
+            'prompt_tokens': total_prompt_tokens,
+            'completion_tokens': total_completion_tokens,
+            'actual_cost': actual_cost
         })
         
     except Exception as e:
@@ -515,6 +534,9 @@ def analyze_file_stream():
             ]
 
             from concurrent.futures import ThreadPoolExecutor, as_completed as futures_as_completed
+            
+            total_prompt_tokens = 0
+            total_completion_tokens = 0
 
             with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
                 future_to_chunk = {
@@ -528,6 +550,11 @@ def analyze_file_stream():
                     try:
                         result_map = future.result(timeout=120)
                         for idx, res in result_map.items():
+                            p_tok = res.pop("_prompt_tokens", 0)
+                            c_tok = res.pop("_completion_tokens", 0)
+                            total_prompt_tokens += p_tok
+                            total_completion_tokens += c_tok
+                            
                             classifications[idx] = res
                             chunk_results[idx] = res
                     except Exception as e:
@@ -546,9 +573,14 @@ def analyze_file_stream():
                             row_data[cat] = res.get(data_key, '')
                         partial_rows.append({'row_idx': row_idx, 'data': row_data})
 
-                    yield f"data: {json.dumps({'type': 'partial_results', 'rows': partial_rows, 'current': min(completed, total_rows), 'total': total_rows, 'percent': round(min(completed, total_rows) / total_rows * 100, 1)})}\n\n"
+                    yield f"data: {json.dumps({'type': 'partial_results', 'rows': partial_rows, 'current': min(completed, total_rows), 'total': total_rows, 'percent': round(min(completed, total_rows) / total_rows * 100, 1), 'prompt_tokens': total_prompt_tokens, 'completion_tokens': total_completion_tokens})}\n\n"
 
             processing_time = time.time() - start_time
+            
+            # Calculate Actual Cost
+            model_name = request.args.get('model', 'flash')
+            cost_details = cost_estimator.calculate_actual_cost(total_prompt_tokens, total_completion_tokens, model_name)
+            actual_cost = cost_details['cost_usd']['total']
 
             # Store results in memory — file is written only when user clicks Download
             job_id = str(uuid.uuid4())
@@ -575,11 +607,15 @@ def analyze_file_stream():
                 columns_added=len(categories),
                 processing_time=processing_time,
                 categories=categories,
-                status='completed'
+                status='completed',
+                prompt_tokens=total_prompt_tokens,
+                completion_tokens=total_completion_tokens,
+                total_tokens=total_prompt_tokens + total_completion_tokens,
+                actual_cost=actual_cost
             )
 
-            # Send complete event with job_id — no file write yet
-            yield f"data: {json.dumps({'type': 'complete', 'rows_processed': total_rows, 'columns_added': len(categories), 'processing_time': round(processing_time, 2), 'job_id': job_id, 'categories': categories, 'original_columns': original_columns})}\n\n"
+            # Send complete event with job_id
+            yield f"data: {json.dumps({'type': 'complete', 'rows_processed': total_rows, 'columns_added': len(categories), 'processing_time': round(processing_time, 2), 'job_id': job_id, 'categories': categories, 'original_columns': original_columns, 'prompt_tokens': total_prompt_tokens, 'completion_tokens': total_completion_tokens, 'actual_cost': actual_cost})}\n\n"
 
         except Exception as e:
             logger.error(f"Error in stream analysis: {e}")

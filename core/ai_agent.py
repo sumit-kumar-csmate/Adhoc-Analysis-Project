@@ -184,6 +184,15 @@ CRITICAL: Output ONLY valid JSON. No markdown code blocks, no explanations, no p
                          time.sleep(2) # brief pause before retry
                          continue
                      raise ValueError(f"Invalid JSON response: {result_text[:50]}...")
+                
+                # Extract Token Usage
+                usage = getattr(response, 'usage', None)
+                if usage:
+                    classification["_prompt_tokens"] = getattr(usage, 'prompt_tokens', 0)
+                    classification["_completion_tokens"] = getattr(usage, 'completion_tokens', 0)
+                else:
+                    classification["_prompt_tokens"] = 0
+                    classification["_completion_tokens"] = 0
 
                 # Universal Mode Return
                 if mode == 'universal':
@@ -191,7 +200,10 @@ CRITICAL: Output ONLY valid JSON. No markdown code blocks, no explanations, no p
 
                 # Specific Mode Return
                 if classification.get("material_type") == "Others":
-                    return {k: "Others" for k in expected_keys}
+                    others_dict = {k: "Others" for k in expected_keys}
+                    others_dict["_prompt_tokens"] = classification["_prompt_tokens"]
+                    others_dict["_completion_tokens"] = classification["_completion_tokens"]
+                    return others_dict
                 
                 # Validate Specific Mode Keys
                 if not expected_keys.issubset(classification.keys()):
@@ -285,6 +297,11 @@ CRITICAL: Output ONLY the JSON array. Start with [ and end with ]. No markdown, 
                     max_tokens=4096  # Max output for Haiku
                 )
 
+                # Extract Token Usage for the chunk
+                usage = getattr(response, 'usage', None)
+                chunk_prompt_tokens = getattr(usage, 'prompt_tokens', 0) if usage else 0
+                chunk_completion_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
+
                 raw = response.choices[0].message.content
                 logger.info(f"_classify_chunk RAW response (chunk start={start_idx}, len={len(chunk)}): {raw[:500]!r}")
                 raw = raw.replace('```json', '').replace('```', '').strip()
@@ -292,6 +309,11 @@ CRITICAL: Output ONLY the JSON array. Start with [ and end with ]. No markdown, 
                 parsed = json.loads(raw)
                 if not isinstance(parsed, list):
                     raise ValueError(f"Expected JSON array, got: {type(parsed)}")
+                    
+                # Distribute tokens evenly among parsed items
+                parsed_count = max(1, len([i for i in parsed if i]))
+                avg_prompt = chunk_prompt_tokens // parsed_count
+                avg_completion = chunk_completion_tokens // parsed_count
 
                 # Map back to original indices — normalise keys to lowercase for consistent lookup
                 result_map = {}
@@ -301,11 +323,16 @@ CRITICAL: Output ONLY the JSON array. Start with [ and end with ]. No markdown, 
                         normalised = {k.lower().replace(' ', '_').replace('-', '_'): v for k, v in item.items()}
                         # Also keep original keys
                         normalised.update(item)
+                        
+                        # Add usage metadata
+                        normalised["_prompt_tokens"] = avg_prompt
+                        normalised["_completion_tokens"] = avg_completion
+                        
                         result_map[start_idx + i] = normalised
                 # Fill any missing items
                 for i in range(len(chunk)):
                     if (start_idx + i) not in result_map:
-                        result_map[start_idx + i] = {}
+                        result_map[start_idx + i] = {"_prompt_tokens": 0, "_completion_tokens": 0}
                 return result_map
 
             except (json.JSONDecodeError, ValueError) as e:

@@ -5,3 +5,4 @@ openpyxl
 pyxlsb
 openai
 python-dotenv
+tiktoken

@@ -53,6 +53,18 @@
                 "positive": [],
                 "negative": []
             }
+        },
+        "Noodles": {
+            "description": "Noodles",
+            "classification_categories": [
+                "Material",
+                "Tradename"
+            ],
+            "prompt_template": "I want material column, for whethers it is acutally noodle or not, if not then write others, Tradename",
+            "keywords": {
+                "positive": [],
+                "negative": []
+            }
         }
     }
 }

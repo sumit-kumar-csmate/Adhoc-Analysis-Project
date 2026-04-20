@@ -34,16 +34,34 @@ class AnalysisHistory:
                 processing_time REAL,
                 status TEXT DEFAULT 'completed',
                 error_message TEXT,
-                categories TEXT
+                categories TEXT,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                actual_cost REAL DEFAULT 0.0
             )
         ''')
         
+        # Safe migration for existing tables
+        try:
+            cursor.execute("SELECT prompt_tokens FROM analysis_runs LIMIT 1")
+        except sqlite3.OperationalError:
+            # Columns don't exist, alter table
+            try:
+                cursor.execute("ALTER TABLE analysis_runs ADD COLUMN prompt_tokens INTEGER DEFAULT 0")
+                cursor.execute("ALTER TABLE analysis_runs ADD COLUMN completion_tokens INTEGER DEFAULT 0")
+                cursor.execute("ALTER TABLE analysis_runs ADD COLUMN total_tokens INTEGER DEFAULT 0")
+                cursor.execute("ALTER TABLE analysis_runs ADD COLUMN actual_cost REAL DEFAULT 0.0")
+            except Exception as e:
+                print(f"Migration error: {e}")
+                
         conn.commit()
         conn.close()
     
     def add_analysis(self, file_name, file_path, material_type, rows_processed, 
                     columns_added, processing_time=None, categories=None, 
-                    status='completed', error_message=None):
+                    status='completed', error_message=None,
+                    prompt_tokens=0, completion_tokens=0, total_tokens=0, actual_cost=0.0):
         """Add a new analysis record"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -54,10 +72,12 @@ class AnalysisHistory:
         cursor.execute('''
             INSERT INTO analysis_runs 
             (timestamp, file_name, file_path, material_type, rows_processed, 
-             columns_added, processing_time, status, error_message, categories)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             columns_added, processing_time, status, error_message, categories,
+             prompt_tokens, completion_tokens, total_tokens, actual_cost)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (timestamp, file_name, file_path, material_type, rows_processed,
-              columns_added, processing_time, status, error_message, categories_json))
+              columns_added, processing_time, status, error_message, categories_json,
+              prompt_tokens, completion_tokens, total_tokens, actual_cost))
         
         conn.commit()
         record_id = cursor.lastrowid
@@ -124,6 +144,12 @@ class AnalysisHistory:
         cursor.execute('SELECT AVG(processing_time) FROM analysis_runs WHERE status = "completed" AND processing_time IS NOT NULL')
         avg_time = cursor.fetchone()[0] or 0
         
+        # Token and cost totals
+        cursor.execute('SELECT SUM(total_tokens), SUM(actual_cost) FROM analysis_runs WHERE status = "completed"')
+        totals = cursor.fetchone()
+        total_tokens_used = totals[0] or 0
+        total_cost = totals[1] or 0.0
+        
         # Material type breakdown
         cursor.execute('''
             SELECT material_type, COUNT(*) as count 
@@ -150,7 +176,9 @@ class AnalysisHistory:
             'total_rows_processed': total_rows,
             'average_processing_time': round(avg_time, 2),
             'material_breakdown': material_breakdown,
-            'recent_analyses': recent
+            'recent_analyses': recent,
+            'total_tokens_used': total_tokens_used,
+            'total_cost': round(total_cost, 2)
         }
     
     def delete_analysis(self, analysis_id):
